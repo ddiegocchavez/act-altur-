@@ -1,0 +1,35 @@
+{
+  "n": 71,
+  "correct": 70,
+  "accuracy": 0.9859154929577465,
+  "auc": 0.9992050874403816,
+  "eer": 0.02702702702702703,
+  "eer_legacy": 0.02702702702702703,
+  "brier": 0.019740960212421024,
+  "confusion_matrix": [
+    [
+      36,
+      1
+    ],
+    [
+      0,
+      34
+    ]
+  ],
+  "transport": "HTTPS public",
+  "url": "https://act-altur.onrender.com",
+  "started_at_utc": "2026-09-12T21:29:46.047910+00:00",
+  "completed_at_utc": "2026-09-12T21:31:20.321629+00:00",
+  "health_latency_ms": 1007.94870000027,
+  "http_successes": 71,
+  "http_errors": 0,
+  "detect_retries": 0,
+  "model_sha256": "12d923ff72cc44cd35b11b0909b65ac488f0a8906f8edbdc50b20710e386e4b6",
+  "pipeline_sha256": "14f675549291d0eb4fd93ee1251ae66fb547d83cd87e4600930c8f809ff06632",
+  "abstentions": 0,
+  "latency_p50_ms": 1031.0771999993449,
+  "latency_p95_ms": 3126.764650000041,
+  "latency_scope": "Sequential, warm server; includes JSON encoding, HTTP and inference, excludes WAV read/base64",
+  "max_probability_delta_offline": 1.3877787807814457e-16,
+  "offline_equivalent": true
+}
