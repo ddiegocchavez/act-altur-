@@ -13,7 +13,7 @@ LABELS = {
 
 def load(name):
     path = Path('reports') / name
-    return json.loads(path.read_text()) if path.exists() else {}
+    return json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
 
 
 def metrics_row(name, m):
@@ -237,7 +237,7 @@ Instala dependencias, verifica/descarga los datos fijados, ejecuta Fase 1, verif
 
 Artefactos de evidencia: `reports/phase2_public_http.json`, `reports/phase3.json`, `reports/phase3_final_clean_http.json`, `reports/phase3_final_edges.json`, `reports/stress_latency.json`, `reports/phase4_robust.json`, `reports/audio_robustness_champion.json` y `reports/audio_robustness_candidate.json`. Predicciones por llamada, audios y cachés permanecen locales. No se ha medido semántica, acústica neuronal, codecs/eco ni calibración independiente. La demo sigue pendiente.
 '''
-    Path('RESULTS.md').write_text(output)
+    Path('RESULTS.md').write_text(output, encoding='utf-8')
     print('RESULTS.md updated from measured reports')
 
 
