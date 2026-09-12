@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from behavior_features import (BLOCKS, LATENCY_BINS, autocorrelation, consistency,
     drift, entropy, extract_blocks, extract_model_features, interruption_recovery,
-    response_series, silence_recovery)
+    relative_recovery, response_series, silence_recovery)
 
 
 class BehaviorTests(unittest.TestCase):
@@ -76,6 +76,27 @@ class BehaviorTests(unittest.TestCase):
         self.assertEqual(len(extract_model_features(turns, BLOCKS)), len(base) + len(extra))
         with self.assertRaises(ValueError):
             extract_blocks(turns, ["typo"])
+
+    def test_relative_recovery_ignores_global_response_speed(self):
+        caller = [[4, 5], [9, 10], [15, 16], [22, 23]]
+        agent = [[0, 2], [6, 7], [11, 13], [18, 20], [25, 26]]
+        original = relative_recovery(caller, agent)
+        faster = relative_recovery([[start - .7, end - .7] for start, end in caller], agent)
+        for key in ("relative_latency_mad", "relative_latency_diff_mad",
+                    "relative_latency_repeat_100ms", "relative_latency_entropy"):
+            self.assertAlmostEqual(original[key], faster[key])
+
+    def test_relative_event_median_is_reliability_weighted(self):
+        caller = [[3, 4], [8, 9]]
+        agent = [[0, 1], [5, 6], [12, 13]]
+        result = relative_recovery(caller, agent)
+        self.assertAlmostEqual(result["relative_silence_reliability"], 2 / 5)
+        self.assertTrue(np.isfinite(result["relative_silence_delta"]))
+
+    def test_relative_missing_event_is_explicit_zero_reliability(self):
+        result = relative_recovery([[2, 3]], [[0, 1], [4, 5]])
+        self.assertEqual(result["relative_silence_reliability"], 0)
+        self.assertEqual(result["relative_silence_delta"], 0)
 
 
 if __name__ == "__main__":

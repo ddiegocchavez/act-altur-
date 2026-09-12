@@ -8,6 +8,12 @@
 
 **Limitación medida:** el seleccionado cae a **63.38%** al adelantar 1.5 s todos los turnos sintéticos y recalcular las señales. La mejora en val no demuestra robustez frente a motores más rápidos. Las tablas completas, definiciones y decisiones están en [RESULTS.md](RESULTS.md).
 
+La auditoría posterior confirmó que el campeón depende fuertemente de una espera
+absoluta cercana a 1.75 s. Ya está implementado, pero todavía no ejecutado sin el
+dataset local, un retador con señales relativas, perturbación temporal continua
+y promoción condicionada al peor caso. La selección tecnológica y repositorios
+de referencia están en [RESEARCH.md](RESEARCH.md).
+
 ## Servir el modelo
 
 Python 3.12, sin descargar el dataset para inferencia:
@@ -70,6 +76,23 @@ Para verificar el modelo seleccionado y sus bordes:
 ```bash
 .venv/bin/python verify_selected.py
 ```
+
+Para auditar atajos y entrenar retadores sin reemplazar al campeón:
+
+```bash
+make audit
+make robust
+```
+
+La promoción es deliberadamente explícita y solo ocurre si se cumplen las
+puertas predeclaradas:
+
+```bash
+.venv/bin/python phase4_robust.py --workers 6 --promote
+```
+
+Con el servidor local activo, las tres familias de robustez de audio se ejecutan
+con `make audio-robust`. Los WAV transformados permanecen en memoria.
 
 Para evaluarlo por HTTPS después de desplegarlo, usar como comparación offline las predicciones de la variante seleccionada:
 

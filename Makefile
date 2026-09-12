@@ -3,7 +3,7 @@ PY := .venv/bin/python
 WORKERS ?= 6
 PUBLIC_URL ?=
 
-.PHONY: all install data phase1 phase2-local phase2-docker phase2-public phase3 stress serve
+.PHONY: all install data phase1 phase2-local phase2-docker phase2-public phase3 audit robust audio-robust stress serve
 
 # Sequential recursive calls keep the gates ordered, even with make -j.
 all:
@@ -46,6 +46,16 @@ phase3:
 	$(PY) -u phase3.py --workers $(WORKERS)
 	$(PY) -u verify_selected.py
 	$(PY) write_results.py
+
+audit:
+	$(PY) -u audit_shortcuts.py
+
+robust:
+	$(PY) -m unittest -v test_behavior test_robustness
+	$(PY) -u phase4_robust.py --workers $(WORKERS)
+
+audio-robust:
+	$(PY) -u audio_robustness.py
 
 stress:
 	$(PY) -u stress_latency.py

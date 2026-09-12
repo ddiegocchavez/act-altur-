@@ -29,6 +29,8 @@ def main():
         raise SystemExit('Run Phase 1 first')
     final = load('phase3_final_http.json') or load('phase3_final_clean_http.json')
     edges = load('phase3_final_edges.json') or load('phase2_edges.json')
+    shortcut = load('shortcut_audit.json')
+    phase4 = load('phase4_robust.json')
     public_passed = (public.get('n') == 71 and public.get('http_successes') == 71
                      and public.get('http_errors') == 0 and public.get('offline_equivalent')
                      and public.get('correct') == 66 and public.get('model_sha256') == local.get('model_sha256'))
@@ -63,6 +65,24 @@ def main():
     p3_status = ('Completada: bloques y combinaciones medidos por HTTP. Selección: ' + ', '.join(p3['selected_blocks']) + '.' if p3 else 'Pendiente de ejecución.')
     broad = {m['model']: m for m in stress.get('results', []) if m['mode'] == 'caller_turn_shift' and m['acceleration_s'] == 1.5}
     stress_conclusion = ('El baseline depende fuertemente de la latencia. El bloque de silencio mejora val, pero también depende del tiempo: al desplazar todos los turnos 1.5 s, el seleccionado cae a ' + f"{broad['selected']['accuracy']:.2%}" + ' y el baseline a ' + f"{broad['baseline']['accuracy']:.2%}" + '. La ganancia en val no demuestra generalización frente a un motor más rápido. Harían falta aumentación temporal y señales independientes, evaluadas antes de incluirse; no se presentan como implementadas.' if broad else 'Prueba pendiente; no hay conclusión de robustez.')
+    if shortcut:
+        dominant = [artifact['ranked_features'][0] for artifact in shortcut['artifacts']]
+        audit_summary = (f"La inspección de árboles confirma el atajo: `{dominant[0]['feature']}` domina "
+                         f"el baseline ({dominant[0]['splits']} splits, {dominant[0]['root_splits']} raíces; "
+                         f"umbral mediano {dominant[0]['threshold_median']:.4g} s) y "
+                         f"`{dominant[1]['feature']}` el seleccionado ({dominant[1]['splits']} splits, "
+                         f"{dominant[1]['root_splits']} raíces; umbral mediano "
+                         f"{dominant[1]['threshold_median']:.4g} s).")
+        dataset_audit = shortcut['dataset_ablations']['status']
+    else:
+        audit_summary, dataset_audit = 'Auditoría pendiente.', 'pending'
+    if phase4:
+        phase4_summary = (f"Fase 4 ejecutada. Retador seleccionado: "
+                          f"`{phase4.get('selected') or 'ninguno'}`; promoción: "
+                          f"`{phase4.get('promoted', False)}`.")
+    else:
+        phase4_summary = ('La implementación está preparada, pero ningún retador fue entrenado ni promovido '
+                          'en esta copia porque faltan los datos oficiales locales.')
     output = f'''# RESULTS — Altur HackMTY 2026
 
 ## Estado y métricas
@@ -70,6 +90,7 @@ def main():
 Fase 1 aprobada. Fase 2 {'**CERRADA**: las 71 llamadas evaluadas contra Render reproducen el baseline local.' if public_passed else '**PENDIENTE** de equivalencia pública.'}
 Docker está aplazado por indicación del usuario. Fase 3: {p3_status}
 Prueba de aceleración: {'completada, con fragilidad documentada abajo.' if stress else 'pendiente.'}
+Auditoría de atajos: {'completada' if shortcut else 'pendiente'}; ablaciones con datos: `{dataset_audit}`.
 
 | Variante | Accuracy | AUC | EER | Brier |
 | --- | ---: | ---: | ---: | ---: |
@@ -157,6 +178,16 @@ Se congelaron ambos modelos antes de la prueba. Se modificaron exclusivamente la
 Son intervenciones sobre features/turnos, no WAVs de un motor nuevo ni una medición HTTP de audio acelerado. El desplazamiento uniforme de todos los turnos también es una simplificación. Los números miden sensibilidad, no rendimiento esperado del set oculto.
 
 **Conclusión para el pitch:** {stress_conclusion}
+
+## Auditoría de atajos y Fase 4
+
+{audit_summary} El detalle reproducible está en `reports/shortcut_audit.json`.
+
+Se implementaron `relative_recovery`, ponderación de eventos escasos, HGB
+regularizado, regresión logística, aumentación temporal no circular, selección
+por peor caso y diagnóstico de calibración. {phase4_summary}
+
+Las métricas de Fase 4 no se extrapolan a partir de los artefactos anteriores.
 
 ## Reproducción y alcance
 

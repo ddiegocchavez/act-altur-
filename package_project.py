@@ -5,13 +5,14 @@ from pathlib import Path
 import zipfile
 
 ROOT_FILES = [
-    "README.md", "RESULTS.md", "PLAN.md", "DATASET_README.md", "Makefile",
+    "README.md", "RESULTS.md", "PLAN.md", "RESEARCH.md", "DATASET_README.md", "Makefile",
     "Dockerfile", "render.yaml", ".gitignore", ".dockerignore", ".python-version", "provenance.py",
     "requirements.txt", "requirements.lock", "requirements-dev.txt",
     "features.py", "vad.py", "train.py", "metrics.py", "phase1.py", "app.py", "serve.py",
     "evaluate_http.py", "check_endpoint.py", "verify_local.py", "verify_docker.py",
     "verify_public.py", "prepare_data.py", "write_results.py", "package_project.py",
     "behavior_features.py", "phase3.py", "stress_latency.py", "test_behavior.py", "verify_selected.py",
+    "audit_shortcuts.py", "phase4_robust.py", "test_robustness.py", "audio_robustness.py",
 ]
 REPORTS = [
     "phase1.json", "phase1_preparation.json", "phase2_http.json", "phase2_edges.json",
@@ -19,6 +20,9 @@ REPORTS = [
     "phase2_public.json", "phase2_public_edges.json",
     "phase2_public_http.json", "phase3.json", "phase3_final_http.json",
     "phase3_final_clean_http.json", "phase3_final_edges.json", "stress_latency.json",
+    "shortcut_audit.json",
+    "phase4_robust.json",
+    "audio_robustness.json",
     "default_vad_correlations_train.csv", "vad_correlations_train.csv",
     "vad_correlations_val.csv", "vad_grid_train.csv",
 ]

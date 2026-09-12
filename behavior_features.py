@@ -6,9 +6,11 @@ and interrupted/resumed speech are timing proxies; no semantic claim is made.
 import numpy as np
 from features import extract_turns, merge
 
-BLOCKS = ("interruption_recovery", "silence_recovery", "consistency", "drift", "autocorrelation")
+BLOCKS = ("interruption_recovery", "silence_recovery", "consistency", "drift", "autocorrelation",
+          "relative_recovery")
 LATENCY_BINS = (-np.inf, -1, 0, .5, 1, 1.5, 2.5, 4, 6, 12, np.inf)
 DURATION_BINS = (0, .25, .5, 1, 2, 3, 5, 8, 12, 20, np.inf)
+RELATIVE_LATENCY_BINS = (-np.inf, -2, -1, -.5, -.2, .2, .5, 1, 2, np.inf)
 
 
 def response_series(caller, agent):
@@ -22,6 +24,23 @@ def response_series(caller, agent):
                 indices.append(index)
                 values.append(gap)
     return np.asarray(indices, dtype=float), np.asarray(values, dtype=float)
+
+
+def response_context_series(caller, agent):
+    """Baseline-compatible response latencies paired with prior agent duration."""
+    indices, latencies, agent_durations = [], [], []
+    for index, (start, _) in enumerate(caller):
+        previous = [(astart, end) for astart, end in agent if astart < start]
+        if not previous:
+            continue
+        astart, end = max(previous, key=lambda item: item[1])
+        gap = start - end
+        if -2 < gap < 12:
+            indices.append(index)
+            latencies.append(gap)
+            agent_durations.append(end - astart)
+    return (np.asarray(indices, dtype=float), np.asarray(latencies, dtype=float),
+            np.asarray(agent_durations, dtype=float))
 
 
 def summary(values, prefix, out, statistics=("med", "p90", "std")):
@@ -141,6 +160,78 @@ def autocorrelation(latencies):
     return f
 
 
+def _weighted_event_delta(values, reference, prior_events=3):
+    """Shrink sparse event medians toward the within-call reference.
+
+    A missing event is represented explicitly by zero reliability instead of an
+    implicit NaN split. This prevents a single observed pause from having the
+    same influence as a distribution supported by many events.
+    """
+    values = np.asarray(values, dtype=float)
+    reliability = len(values) / (len(values) + prior_events)
+    if not len(values) or not np.isfinite(reference):
+        return 0.0, float(reliability)
+    return float(reliability * (np.median(values) - reference)), float(reliability)
+
+
+def relative_recovery(caller, agent):
+    """Translation-resistant behavior features from the same timing signal.
+
+    Absolute response speed is deliberately removed. The block measures
+    within-call irregularity and how special events differ from that call's own
+    typical response. Event deltas are reliability-weighted.
+    """
+    _, latencies, agent_durations = response_context_series(caller, agent)
+    reference = float(np.median(latencies)) if len(latencies) else np.nan
+    centered = latencies - reference if len(latencies) else np.asarray([], dtype=float)
+    differences = np.diff(latencies)
+    f = {
+        "relative_latency_reliability": float(min(len(latencies) / 8, 1)),
+        "relative_latency_mad": (float(np.median(np.abs(centered)))
+                                 if len(centered) else np.nan),
+        "relative_latency_diff_mad": (float(np.median(np.abs(differences - np.median(differences))))
+                                      if len(differences) else np.nan),
+        "relative_latency_repeat_100ms": (float(np.mean(np.abs(differences) <= .1))
+                                          if len(differences) else np.nan),
+        "relative_latency_entropy": entropy(centered, RELATIVE_LATENCY_BINS),
+    }
+    if (len(latencies) >= 3 and len(agent_durations) == len(latencies)
+            and latencies.std() > 1e-6 and agent_durations.std() > 1e-6):
+        f["relative_agent_duration_corr"] = float(np.corrcoef(agent_durations, latencies)[0, 1])
+    else:
+        f["relative_agent_duration_corr"] = np.nan
+
+    silence_waits = []
+    for (_, end), (next_start, _) in zip(agent, agent[1:]):
+        if next_start - end <= 3:
+            continue
+        starts = [(cs, ce) for cs, ce in caller if end < cs < next_start]
+        if starts:
+            silence_waits.append(starts[0][0] - end)
+    silence_delta, silence_reliability = _weighted_event_delta(silence_waits, reference)
+    f["relative_silence_delta"] = silence_delta
+    f["relative_silence_reliability"] = silence_reliability
+
+    resume_from_agent_end = []
+    end_of_observation = max([end for _, end in caller + agent], default=0)
+    for caller_index, (caller_start, caller_end) in enumerate(caller):
+        interruptions = [(agent_index, start, end) for agent_index, (start, end) in enumerate(agent)
+                         if caller_start < start < caller_end]
+        if not interruptions:
+            continue
+        agent_index, _, agent_end = interruptions[0]
+        next_agent = agent[agent_index + 1][0] if agent_index + 1 < len(agent) else end_of_observation
+        window_end = min(agent_end + 12, next_agent, end_of_observation)
+        if window_end <= caller_end:
+            continue
+        if caller_index + 1 < len(caller) and caller[caller_index + 1][0] < window_end:
+            resume_from_agent_end.append(caller[caller_index + 1][0] - agent_end)
+    interruption_delta, interruption_reliability = _weighted_event_delta(resume_from_agent_end, reference)
+    f["relative_interruption_delta"] = interruption_delta
+    f["relative_interruption_reliability"] = interruption_reliability
+    return f
+
+
 def extract_blocks(payload, blocks=BLOCKS, latency_override=None):
     turns = payload["turns"] if isinstance(payload, dict) else payload
     caller, agent = merge(turns, 0), merge(turns, 1)
@@ -161,6 +252,8 @@ def extract_blocks(payload, blocks=BLOCKS, latency_override=None):
             f.update(drift(indices, latencies))
         elif block == "autocorrelation":
             f.update(autocorrelation(latencies))
+        elif block == "relative_recovery":
+            f.update(relative_recovery(caller, agent))
         else:
             raise ValueError(f"Unknown feature block: {block}")
     return f

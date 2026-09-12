@@ -5,6 +5,7 @@
 Fase 1 aprobada. Fase 2 **CERRADA**: las 71 llamadas evaluadas contra Render reproducen el baseline local.
 Docker está aplazado por indicación del usuario. Fase 3: Completada: bloques y combinaciones medidos por HTTP. Selección: silence_recovery.
 Prueba de aceleración: completada, con fragilidad documentada abajo.
+Auditoría de atajos: completada; ablaciones con datos: `pending`.
 
 | Variante | Accuracy | AUC | EER | Brier |
 | --- | ---: | ---: | ---: | ---: |
@@ -123,6 +124,16 @@ Se congelaron ambos modelos antes de la prueba. Se modificaron exclusivamente la
 Son intervenciones sobre features/turnos, no WAVs de un motor nuevo ni una medición HTTP de audio acelerado. El desplazamiento uniforme de todos los turnos también es una simplificación. Los números miden sensibilidad, no rendimiento esperado del set oculto.
 
 **Conclusión para el pitch:** El baseline depende fuertemente de la latencia. El bloque de silencio mejora val, pero también depende del tiempo: al desplazar todos los turnos 1.5 s, el seleccionado cae a 63.38% y el baseline a 77.46%. La ganancia en val no demuestra generalización frente a un motor más rápido. Harían falta aumentación temporal y señales independientes, evaluadas antes de incluirse; no se presentan como implementadas.
+
+## Auditoría de atajos y Fase 4
+
+La inspección de árboles confirma el atajo: `lat_med` domina el baseline (253 splits, 165 raíces; umbral mediano 1.83 s) y `silence_fill_wait_med` el seleccionado (315 splits, 194 raíces; umbral mediano 1.748 s). El detalle reproducible está en `reports/shortcut_audit.json`.
+
+Se implementaron `relative_recovery`, ponderación de eventos escasos, HGB
+regularizado, regresión logística, aumentación temporal no circular, selección
+por peor caso y diagnóstico de calibración. La implementación está preparada, pero ningún retador fue entrenado ni promovido en esta copia porque faltan los datos oficiales locales.
+
+Las métricas de Fase 4 no se extrapolan a partir de los artefactos anteriores.
 
 ## Reproducción y alcance
 

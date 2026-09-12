@@ -1,5 +1,10 @@
 > Actualización del usuario: usar `https://github.com/Chaarliee06/altur-detector` y aplazar Docker. La puerta de Fase 2 conserva equivalencia HTTP y verificación del endpoint público con Python; Docker no la bloquea. Las demás puertas y la restricción de procesar el audio localmente permanecen vigentes.
 
+> Plan robusto aprobado: primero publicar y verificar el campeón 69/71; después
+> auditar atajos, entrenar `relative_recovery` con perturbaciones continuas,
+> seleccionar por peor caso, diagnosticar calibración y ejecutar únicamente las
+> pruebas de ganancia, remuestreo y recorte. La semántica permanece al final.
+
 ## Tarea
 
 Dada una llamada telefónica entre un llamante y el agente bancario de IA de Altur,
@@ -173,3 +178,18 @@ el endpoint corre.
 El servicio público es https://altur-detector.onrender.com. El usuario autorizó expresamente evaluar las 71 llamadas de val contra esa URL HTTPS, despertando primero /health. Esta petición habilita ese envío al servicio del equipo; el entrenamiento y los experimentos permanecen locales. Docker sigue aplazado. La puerta de Fase 2 se cierra al reproducir el 92.96% local por HTTPS, sin exigir la comprobación Docker ni el soak anterior de 900 segundos.
 
 La Fase 3 de este incremento es temporal: recuperación de interrupción, recuperación de silencio, consistencia, deriva y autocorrelación. Evaluar los bloques por separado con el VAD congelado y el mismo endpoint; dejar fuera los que no mejoren accuracy. Después simular latencias sintéticas menores en 1.0 y 1.5 segundos, actualizar RESULTS.md y hacer push. Semántica, acústica y demo no forman parte de este incremento.
+
+## Incremento robusto predeclarado
+
+`audit_shortcuts.py` inspecciona umbrales de los artefactos y, cuando existe la
+caché oficial, entrena ablaciones solo-agente, solo-llamante, solo-interacción,
+solo-`silence_fill_wait_med` y solo-missingness. `phase4_robust.py` compara el
+campeón con HGB regularizado y logística usando perturbaciones reproducibles.
+
+Los desplazamientos de entrenamiento se muestrean continuamente en 0–2 s, pero
+se excluyen vecindarios de ±0.1 s alrededor de 0.5, 1.0 y 1.5 s. La promoción
+requiere al menos 68/71 limpio y superar estrictamente al campeón en el peor
+caso de limpio/−0.5/−1.0/−1.5 s. Sin `--promote`, nunca reemplaza el artefacto.
+Platt, ECE y log-loss son un diagnóstico in-sample declarado y no intervienen
+en selección ni despliegue. `audio_robustness.py` limita el alcance a las tres
+familias aprobadas y procesa todas las transformaciones en memoria.

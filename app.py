@@ -69,8 +69,9 @@ async def lifespan(app):
     path = Path(os.environ.get("MODEL_PATH", str(ROOT / "artifacts/model.joblib")))
     # Only load our own trusted artifact; joblib is not an upload format.
     bundle = joblib.load(path)
-    if bundle.get("trained_split") != "train" or bundle.get("nan_policy") != "native_hgb":
-        raise RuntimeError("Model must use train-only fitting and native missing values")
+    supported_nan_policies = {"native_hgb", "pipeline_imputer"}
+    if bundle.get("trained_split") != "train" or bundle.get("nan_policy") not in supported_nan_policies:
+        raise RuntimeError("Model must use train-only fitting and an explicit missing-value policy")
     if not bundle.get("vad_config"):
         raise RuntimeError("A frozen VAD configuration is required")
     if set(bundle.get("feature_blocks", ())) - set(BLOCKS):
