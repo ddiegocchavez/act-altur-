@@ -22,6 +22,26 @@ def metrics_row(name, m):
     return f"| {name} | {m['accuracy']:.2%} ({m['correct']}/{m['n']}) | {m['auc']:.6f} | {m['eer']:.6f} | {m['brier']:.6f} |"
 
 
+def scenario_rows(candidate, champion):
+    previous = {item['scenario']: item for item in champion}
+    rows = []
+    for item in candidate:
+        delta = item['correct'] - previous[item['scenario']]['correct']
+        rows.append(f"| `{item['scenario']}` | {previous[item['scenario']]['correct']}/71 | "
+                    f"**{item['correct']}/71 ({item['accuracy']:.2%})** | {delta:+d} |")
+    return rows
+
+
+def audio_rows(candidate, champion):
+    rows = []
+    for name, item in candidate.items():
+        old = champion[name]
+        delta = item['correct'] - old['correct']
+        rows.append(f"| `{name}` | {old['correct']}/71 | **{item['correct']}/71 "
+                    f"({item['accuracy']:.2%})** | {delta:+d} | {item['abstentions']} |")
+    return rows
+
+
 def main():
     p1, local, public, p3, stress = [load(n) for n in (
         'phase1.json', 'phase2_http.json', 'phase2_public_http.json', 'phase3.json', 'stress_latency.json')]
@@ -31,6 +51,8 @@ def main():
     edges = load('phase3_final_edges.json') or load('phase2_edges.json')
     shortcut = load('shortcut_audit.json')
     phase4 = load('phase4_robust.json')
+    audio_champion = load('audio_robustness_champion.json')
+    audio_candidate = load('audio_robustness_candidate.json')
     public_passed = (public.get('n') == 71 and public.get('http_successes') == 71
                      and public.get('http_errors') == 0 and public.get('offline_equivalent')
                      and public.get('correct') == 66 and public.get('model_sha256') == local.get('model_sha256'))
@@ -76,10 +98,20 @@ def main():
         dataset_audit = shortcut['dataset_ablations']['status']
     else:
         audit_summary, dataset_audit = 'Auditoría pendiente.', 'pending'
+    phase4_detail = ''
     if phase4:
         phase4_summary = (f"Fase 4 ejecutada. Retador seleccionado: "
                           f"`{phase4.get('selected') or 'ninguno'}`; promoción: "
                           f"`{phase4.get('promoted', False)}`.")
+        selected = next((item for item in phase4.get('candidates', [])
+                         if item['name'] == phase4.get('selected')), None)
+        if selected:
+            rows = scenario_rows(selected['scenarios'], phase4['champion_scenarios'])
+            phase4_detail = f'''\n\n| Escenario sobre turnos | Campeón anterior | Retador balanceado | Delta |\n| --- | ---: | ---: | ---: |\n{chr(10).join(rows)}\n\nEl retador usa {selected['features']} features y conserva el bloque `{selected['blocks'][0]}`.\nSu SHA-256 es `{selected['artifact_sha256']}`. Las tres puertas internas: limpio,\nrobustez temporal y balance por escenario, quedaron en\n`{selected['clean_gate_passed']}`, `{selected['timing_robustness_gate_passed']}` y\n`{selected['balance_gate_passed']}` respectivamente.'''
+        if (audio_champion.get('status') == 'complete'
+                and audio_candidate.get('status') == 'complete'):
+            rows = audio_rows(audio_candidate['scenarios'], audio_champion['scenarios'])
+            phase4_detail += f'''\n\nPrueba HTTP con WAV real y transformaciones en memoria:\n\n| Escenario de audio | Campeón anterior | Modelo promovido | Delta | Abstenciones |\n| --- | ---: | ---: | ---: | ---: |\n{chr(10).join(rows)}\n\nLa puerta externa de audio quedó en\n`{phase4.get('audio_promotion_gate', {}).get('passed')}`; el HTTP final procesó\n{phase4.get('http_verification', {}).get('http_successes', '—')}/71 sin errores y\nreprodujo las probabilidades offline con diferencia máxima\n`{phase4.get('http_verification', {}).get('max_probability_delta_offline', '—')}`.'''
     else:
         phase4_summary = ('La implementación está preparada, pero ningún retador fue entrenado ni promovido '
                           'en esta copia porque faltan los datos oficiales locales.')
@@ -185,7 +217,7 @@ Son intervenciones sobre features/turnos, no WAVs de un motor nuevo ni una medic
 
 Se implementaron `relative_recovery`, ponderación de eventos escasos, HGB
 regularizado, regresión logística, aumentación temporal no circular, selección
-por peor caso y diagnóstico de calibración. {phase4_summary}
+por peor caso y diagnóstico de calibración. {phase4_summary}{phase4_detail}
 
 La primera ejecución externa del retador temporal conservó 69/71 limpio y elevó
 el peor estrés temporal de 45/71 a 66/71, pero quedó rechazado por recortes:
@@ -203,7 +235,7 @@ make all PUBLIC_URL=https://altur-detector.onrender.com
 
 Instala dependencias, verifica/descarga los datos fijados, ejecuta Fase 1, verifica baseline local y público, corre ablaciones por HTTP y estrés. Las puertas se ejecutan secuencialmente. La comprobación pública requiere que esa URL sirva el baseline cuya métrica se compara; falla si el despliegue cambió. Para repetir Fase 3 después del cierre público registrado: `make phase3 stress`.
 
-Artefactos de evidencia: `reports/phase2_public_http.json`, `reports/phase3.json`, `reports/phase3_final_clean_http.json`, `reports/phase3_final_edges.json`, `reports/stress_latency.json`. Predicciones por llamada y cachés permanecen locales. No se ha medido semántica, acústica, clips parciales, ruido/ganancia ni calibración adicional. La demo sigue pendiente.
+Artefactos de evidencia: `reports/phase2_public_http.json`, `reports/phase3.json`, `reports/phase3_final_clean_http.json`, `reports/phase3_final_edges.json`, `reports/stress_latency.json`, `reports/phase4_robust.json`, `reports/audio_robustness_champion.json` y `reports/audio_robustness_candidate.json`. Predicciones por llamada, audios y cachés permanecen locales. No se ha medido semántica, acústica neuronal, codecs/eco ni calibración independiente. La demo sigue pendiente.
 '''
     Path('RESULTS.md').write_text(output)
     print('RESULTS.md updated from measured reports')

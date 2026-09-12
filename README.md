@@ -6,13 +6,19 @@
 
 **Fase 3:** se probaron cinco bloques por separado y una combinación. El artefacto seleccionado añade únicamente respuesta al silencio: **69/71 (97.18%)**, AUC **0.9905**, Brier **0.0306**, verificado por el mismo endpoint en HTTP local. Tiene 67 features: 58 originales y nueve nuevas. `artifacts/baseline_model.joblib` conserva el baseline público; `artifacts/model.joblib` contiene el seleccionado. La evaluación pública registrada corresponde al baseline, y la del seleccionado corresponde a HTTP local.
 
-**Limitación medida:** el seleccionado cae a **63.38%** al adelantar 1.5 s todos los turnos sintéticos y recalcular las señales. La mejora en val no demuestra robustez frente a motores más rápidos. Las tablas completas, definiciones y decisiones están en [RESULTS.md](RESULTS.md).
+**Fase 4 promovida:** la aumentación temporal y por duración elevó el resultado
+limpio a **70/71 (98.59%)**, AUC **0.9992** y Brier **0.0197**. Al adelantar
+1.5 s los turnos sintéticos obtiene **69/71**, frente a 45/71 del campeón
+anterior. En audio real mantiene 70/71 con ganancia ±6 dB y remuestreo
+8→16→8 kHz; obtiene 61/71 y 65/71 con recortes a 30 y 60 s. Mejoró al campeón
+anterior en los seis escenarios y fue promovido solo después de reproducir
+70/71 por HTTP sin abstenciones.
 
-La auditoría posterior confirmó que el campeón depende fuertemente de una espera
-absoluta cercana a 1.75 s. Ya está implementado, pero todavía no ejecutado sin el
-dataset local, un retador con señales relativas, perturbación temporal continua
-y promoción condicionada al peor caso. La selección tecnológica y repositorios
-de referencia están en [RESEARCH.md](RESEARCH.md).
+Estos resultados siguen siendo exploratorios: las mismas 71 llamadas de val se
+utilizaron anteriormente para seleccionar bloques y no sustituyen una evaluación
+oculta independiente. Las tablas, hashes y decisiones están en
+[RESULTS.md](RESULTS.md); los repositorios de referencia están en
+[RESEARCH.md](RESEARCH.md).
 
 ## Servir el modelo
 
@@ -118,7 +124,7 @@ El CSV se genera localmente al ejecutar `phase3.py`; no se distribuye. La prueba
 - Misma extracción en memoria al entrenar y servir. Leer floats de un CSV para el experimento provocó una discrepancia en un umbral de árbol; se corrigió y repitió toda la ablación.
 - Estrés con modelos congelados: reducción de latencias y desplazamiento completo de turnos, manteniendo intactas las llamadas humanas. Ninguno representa una evaluación de audio real de un motor nuevo.
 
-Val también se utiliza para seleccionar bloques: el 97.18% es exploratorio y requiere confirmación independiente. No se midieron todavía semántica, acústica, clips cortos, ruido/ganancia, calibración adicional ni demo.
+Val también se reutilizó para seleccionar bloques y retadores: el 98.59% es exploratorio y requiere confirmación independiente. Se midieron ganancia, remuestreo y clips de 30/60 s; todavía no se midieron semántica, acústica neuronal, codecs/eco, calibración independiente ni demo.
 
 ## Render y modelo publicado
 
@@ -126,4 +132,4 @@ Val también se utiliza para seleccionar bloques: el 97.18% es exploratorio y re
 
 El plan gratuito puede suspender la instancia: llamar primero a `/health`. Los percentiles registrados excluyen ese chequeo previo. [Documentación de Render](https://render.com/docs/free).
 
-Código: [Chaarliee06/altur-detector](https://github.com/Chaarliee06/altur-detector). Datos y condiciones: [repo oficial](https://github.com/alturio/hackmty26), [release v1.0](https://github.com/alturio/hackmty26/releases/tag/v1.0). Uso exclusivo HackMTY 2026; no redistribuir el dataset ni intentar identificar participantes. `baseline_original/` conserva los archivos recibidos; su script de entrenamiento original no debe ejecutarse porque ajustaba también con val.
+Código: [ddiegocchavez/act-altur-](https://github.com/ddiegocchavez/act-altur-). Datos y condiciones: [repo oficial](https://github.com/alturio/hackmty26), [release v1.0](https://github.com/alturio/hackmty26/releases/tag/v1.0). Uso exclusivo HackMTY 2026; no redistribuir el dataset ni intentar identificar participantes. `baseline_original/` conserva los archivos recibidos; su script de entrenamiento original no debe ejecutarse porque ajustaba también con val.

@@ -31,6 +31,8 @@ reports/*.json
 !reports/stress_latency.json
 !reports/shortcut_audit.json
 !reports/phase4_robust.json
+!reports/audio_robustness_champion.json
+!reports/audio_robustness_candidate.json
 !reports/audio_robustness.json
 !reports/default_vad_correlations_train.csv
 !reports/vad_correlations_train.csv
