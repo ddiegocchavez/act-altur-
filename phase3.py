@@ -13,7 +13,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from behavior_features import BLOCKS, extract_blocks, extract_model_features
+from behavior_features import extract_blocks, extract_model_features
 from check_endpoint import check_endpoint
 from evaluate_http import evaluate_http
 from train import fit_and_evaluate
@@ -21,6 +21,8 @@ from vad import turns_from_wav
 from verify_local import wait_for_health
 
 EXPERIMENTS = Path("artifacts/experiments")
+PHASE3_BLOCKS = ("interruption_recovery", "silence_recovery", "consistency", "drift",
+                 "autocorrelation")
 
 
 def require_phase2():
@@ -118,7 +120,8 @@ def main():
         rows.append({"anon_id": row.anon_id, "label": row.label, "split": row.split, **f, **extra})
     frame = pd.DataFrame(rows)
     frame.to_csv("cache/features_behavior.csv", index=False)
-    block_names = {block: list(extract_blocks(next(iter(turns.values())), (block,))) for block in BLOCKS}
+    block_names = {block: list(extract_blocks(next(iter(turns.values())), (block,)))
+                   for block in PHASE3_BLOCKS}
     baseline_http = candidate_http("baseline", baseline_path, Path("reports/phase1_predictions_val.csv"))
     if baseline_http["correct"] != 66 or not baseline_http["offline_equivalent"]:
         raise RuntimeError("Updated inference code changed the baseline")
@@ -144,7 +147,7 @@ def main():
         print(f"ABLATION {name}: {http['correct']}/71, delta={record['delta_accuracy_pp']:+.2f} pp", flush=True)
         return record
 
-    singles = [measure(block, (block,)) for block in BLOCKS]
+    singles = [measure(block, (block,)) for block in PHASE3_BLOCKS]
     # Predeclared rule: accuracy first. Ties favor fewer features, then AUC/Brier.
     passing = sorted([r for r in singles if r["improves_baseline"]],
                      key=lambda r: (-r["http"]["correct"], r["features"], -r["http"]["auc"], r["http"]["brier"]))
@@ -169,7 +172,7 @@ def main():
               "selected_name": selected["name"] if selected else "baseline",
               "selected_metrics": selected["http"] if selected else baseline_http,
               "selected_model_sha256": hashlib.sha256(Path("artifacts/model.joblib").read_bytes()).hexdigest(),
-              "discarded_blocks": [b for b in BLOCKS if b not in selected_blocks]}
+              "discarded_blocks": [b for b in PHASE3_BLOCKS if b not in selected_blocks]}
     Path("reports/phase3.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({"selected_blocks": selected_blocks, "accuracy": result["selected_metrics"]["accuracy"]}), flush=True)
 

@@ -27,8 +27,11 @@ from stress_latency import shift_caller_turns
 
 
 SEED = 20260912
-TRAIN_AUGMENTATIONS = 3
+TRAIN_TIME_AUGMENTATIONS = 3
+# Exact 30/60 s evaluation horizons and nearby durations remain unseen.
+TRAIN_TRUNCATION_INTERVALS_S = ((20., 28.), (32., 55.), (65., 90.))
 EVALUATION_SHIFTS = (0.0, 0.5, 1.0, 1.5)
+EVALUATION_TRUNCATIONS_S = (30., 60.)
 # Hold out +/- 0.1 s around every exact nonzero evaluation point.
 TRAIN_SHIFT_INTERVALS = ((0.0, 0.4), (0.6, 0.9), (1.1, 1.4), (1.6, 2.0))
 PHASE4_BLOCKS = ("silence_recovery", "relative_recovery")
@@ -59,6 +62,18 @@ def jitter_turns(payload, rng, shift_std=.06, boundary_std=.025):
     return {"turns": sorted(output, key=lambda turn: (turn["start"], turn["channel"]))}
 
 
+def truncate_turns(payload, seconds):
+    """Clip a turn payload at an observation horizon without future leakage."""
+    turns = []
+    for turn in payload["turns"]:
+        start = float(turn["start"])
+        if start >= seconds:
+            continue
+        turns.append({"channel": int(turn["channel"]), "start": start,
+                      "end": min(float(turn["end"]), seconds)})
+    return {"turns": turns}
+
+
 def augmented_payload(payload, label, rng):
     result = jitter_turns(payload, rng)
     if label == "synthetic":
@@ -70,7 +85,7 @@ def feature_union(payload):
     return extract_model_features(payload, PHASE4_BLOCKS)
 
 
-def build_frames(manifest, payloads, augmentations=TRAIN_AUGMENTATIONS):
+def build_frames(manifest, payloads, augmentations=TRAIN_TIME_AUGMENTATIONS):
     rng = np.random.default_rng(SEED)
     clean, augmented = [], []
     for row in manifest.itertuples(index=False):
@@ -82,6 +97,14 @@ def build_frames(manifest, payloads, augmentations=TRAIN_AUGMENTATIONS):
             for index in range(augmentations):
                 payload = augmented_payload(payloads[row.anon_id], row.label, rng)
                 augmented.append({"anon_id": f"{row.anon_id}__aug{index}", "source_id": row.anon_id,
+                                  "label": row.label, "split": "train", **feature_union(payload)})
+            truncations = [float(rng.uniform(left, right))
+                           for left, right in TRAIN_TRUNCATION_INTERVALS_S]
+            for index, seconds in enumerate(truncations):
+                payload = augmented_payload(payloads[row.anon_id], row.label, rng)
+                payload = truncate_turns(payload, seconds)
+                augmented.append({"anon_id": f"{row.anon_id}__clip{index}",
+                                  "source_id": row.anon_id, "observation_s": seconds,
                                   "label": row.label, "split": "train", **feature_union(payload)})
     return pd.DataFrame(clean), pd.DataFrame(augmented)
 
@@ -103,12 +126,14 @@ def fit_model(frame, feature_names, kind):
     return model
 
 
-def probability_for_manifest(model, names, blocks, manifest, payloads, shift=0.):
+def probability_for_manifest(model, names, blocks, manifest, payloads, shift=0., truncate_s=None):
     vectors = []
     for row in manifest.itertuples(index=False):
         payload = payloads[row.anon_id]
         if row.label == "synthetic" and shift:
             payload = shift_caller_turns(payload, shift)
+        if truncate_s is not None:
+            payload = truncate_turns(payload, truncate_s)
         features = extract_model_features(payload, blocks)
         vectors.append([features.get(name, np.nan) for name in names])
     with threadpool_limits(limits=1):
@@ -118,12 +143,18 @@ def probability_for_manifest(model, names, blocks, manifest, payloads, shift=0.)
 def scenario_report(model, names, blocks, val, payloads):
     y = (val.label == "synthetic").astype(int).to_numpy()
     scenarios, clean_probability = [], None
-    for shift in EVALUATION_SHIFTS:
-        probability = probability_for_manifest(model, names, blocks, val, payloads, shift)
+    definitions = [("clean", 0., None)]
+    definitions += [(f"acceleration_{shift:g}s", shift, None)
+                    for shift in EVALUATION_SHIFTS[1:]]
+    definitions += [(f"truncate_{seconds:g}s", 0., seconds)
+                    for seconds in EVALUATION_TRUNCATIONS_S]
+    for name, shift, truncate_s in definitions:
+        probability = probability_for_manifest(model, names, blocks, val, payloads, shift, truncate_s)
         if shift == 0:
-            clean_probability = probability
+            if truncate_s is None:
+                clean_probability = probability
         scores = evaluate(y, probability)
-        scores.update(acceleration_s=shift,
+        scores.update(scenario=name, acceleration_s=shift, truncate_s=truncate_s,
                       synthetic_recall=float(np.mean(probability[y == 1] > .5)))
         scenarios.append(scores)
     return scenarios, clean_probability
@@ -173,7 +204,10 @@ def bundle_for(model, names, blocks, config, kind, metrics):
             "nan_policy": "native_hgb" if kind == "hgb" else "pipeline_imputer",
             "decision_threshold": .5, "score_semantics": "P(synthetic)",
             "feature_blocks": list(blocks), "metrics": metrics,
-            "robust_training": {"seed": SEED, "augmentations_per_train_call": TRAIN_AUGMENTATIONS,
+            "robust_training": {"seed": SEED,
+                                "time_augmentations_per_train_call": TRAIN_TIME_AUGMENTATIONS,
+                                "truncation_intervals_s": TRAIN_TRUNCATION_INTERVALS_S,
+                                "held_out_truncations_s": EVALUATION_TRUNCATIONS_S,
                                 "shift_intervals_s": TRAIN_SHIFT_INTERVALS,
                                 "held_out_evaluation_shifts_s": EVALUATION_SHIFTS[1:]},
             "model_kind": kind}
@@ -183,6 +217,45 @@ def candidate_rank(record):
     clean = record["scenarios"][0]
     worst = min(record["scenarios"], key=lambda item: item["correct"])
     return (-worst["correct"], -clean["correct"], clean["brier"], record["features"])
+
+
+def candidate_gates(scenarios, champion_scenarios, tolerance=1):
+    candidate = {item["scenario"]: item for item in scenarios}
+    champion = {item["scenario"]: item for item in champion_scenarios}
+    if candidate.keys() != champion.keys():
+        raise ValueError("Candidate/champion scenarios differ")
+    deltas = {name: candidate[name]["correct"] - champion[name]["correct"] for name in candidate}
+    timing_names = [name for name in candidate if name.startswith("acceleration_")]
+    return {
+        "clean_gate_passed": candidate["clean"]["correct"] >= 68,
+        "timing_robustness_gate_passed": (min(candidate[name]["correct"] for name in timing_names)
+                                           > min(champion[name]["correct"] for name in timing_names)),
+        "balance_gate_passed": all(delta >= -tolerance for delta in deltas.values()),
+        "scenario_correct_deltas": deltas,
+        "allowed_regression_calls": tolerance,
+    }
+
+
+def audio_promotion_gate(selected, champion_sha256):
+    paths = {"champion": Path("reports/audio_robustness_champion.json"),
+             "candidate": Path("reports/audio_robustness_candidate.json")}
+    if not all(path.exists() for path in paths.values()):
+        raise RuntimeError("Promotion requires champion and candidate audio robustness reports")
+    reports = {name: json.loads(path.read_text()) for name, path in paths.items()}
+    if any(report.get("status") != "complete" for report in reports.values()):
+        raise RuntimeError("Audio robustness reports are incomplete")
+    if reports["champion"].get("model_sha256") != champion_sha256:
+        raise RuntimeError("Champion audio report has the wrong model hash")
+    if reports["candidate"].get("model_sha256") != selected["artifact_sha256"]:
+        raise RuntimeError("Candidate audio report has the wrong model hash")
+    names = set(reports["champion"]["scenarios"])
+    if names != set(reports["candidate"]["scenarios"]):
+        raise RuntimeError("Audio reports use different scenarios")
+    deltas = {name: (reports["candidate"]["scenarios"][name]["correct"]
+                     - reports["champion"]["scenarios"][name]["correct"]) for name in names}
+    return {"passed": all(delta >= -1 for delta in deltas.values()),
+            "allowed_regression_calls": 1, "scenario_correct_deltas": deltas,
+            "reports": {name: str(path) for name, path in paths.items()}}
 
 
 def main():
@@ -204,11 +277,13 @@ def main():
         raise RuntimeError("Champion differs from the validated Phase 3 artifact")
     payloads, cache = load_vad_turns(manifest, baseline["vad_config"], args.workers)
     clean_frame, augmented_frame = build_frames(manifest, payloads)
+    Path("cache").mkdir(exist_ok=True)
+    clean_frame.to_csv("cache/features_behavior.csv", index=False)
     sample = feature_union(next(iter(payloads.values())))
     relative_names = list(extract_blocks(next(iter(payloads.values())), ("relative_recovery",)))
     robust_names = robust_feature_names(baseline["feats"], relative_names)
     specs = [
-        ("augmented_current_hgb", champion["feats"], champion.get("feature_blocks", ()), "hgb"),
+        ("balanced_current_hgb", champion["feats"], champion.get("feature_blocks", ()), "hgb"),
         ("relative_hgb", robust_names, ("relative_recovery",), "hgb"),
         ("relative_logistic", robust_names, ("relative_recovery",), "logistic"),
     ]
@@ -233,18 +308,23 @@ def main():
         predictions["p_synthetic"] = clean_probability
         predictions.to_csv(Path("reports") / f"phase4_{name}_offline.csv", index=False)
         worst = min(item["correct"] for item in scenarios)
+        gates = candidate_gates(scenarios, champion_scenarios)
         candidates.append({"name": name, "kind": kind, "features": len(names), "blocks": list(blocks),
                            "artifact": str(path), "artifact_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                           "scenarios": scenarios, "clean_gate_passed": scenarios[0]["correct"] >= 68,
-                           "robustness_gate_passed": worst > champion_worst,
+                           "scenarios": scenarios, **gates,
                            "worst_case_correct": worst,
                            "calibration": calibration_diagnostic(y_val, clean_probability)})
     eligible = sorted([item for item in candidates if item["clean_gate_passed"]
-                       and item["robustness_gate_passed"]], key=candidate_rank)
+                       and item["timing_robustness_gate_passed"]
+                       and item["balance_gate_passed"]], key=candidate_rank)
     selected = eligible[0] if eligible else None
     promoted = False
     http_verification = None
+    audio_gate = None
     if args.promote and selected:
+        audio_gate = audio_promotion_gate(selected, phase3["selected_model_sha256"])
+        if not audio_gate["passed"]:
+            raise RuntimeError("Candidate regresses audio robustness; champion was not replaced")
         offline = Path("reports") / f"phase4_{selected['name']}_offline.csv"
         http_verification = candidate_http("phase4_final", Path(selected["artifact"]), offline)
         if (not http_verification.get("offline_equivalent")
@@ -256,13 +336,17 @@ def main():
         "status": "complete", "champion_sha256": phase3["selected_model_sha256"],
         "champion_scenarios": champion_scenarios, "champion_worst_case_correct": champion_worst,
         "champion_calibration": calibration_diagnostic(y_val, champion_probability),
-        "training": {"seed": SEED, "augmentations_per_train_call": TRAIN_AUGMENTATIONS,
+        "training": {"seed": SEED,
+                     "time_augmentations_per_train_call": TRAIN_TIME_AUGMENTATIONS,
+                     "truncation_intervals_s": TRAIN_TRUNCATION_INTERVALS_S,
+                     "held_out_truncations_s": EVALUATION_TRUNCATIONS_S,
                      "continuous_shift_intervals_s": TRAIN_SHIFT_INTERVALS,
                      "held_out_fixed_shifts_s": EVALUATION_SHIFTS[1:],
-                     "note": "Fixed evaluation points and +/-0.1 s neighborhoods are excluded from training."},
-        "selection_rule": "Require clean >=68/71 and worst-case accuracy across clean/-0.5/-1.0/-1.5 strictly above champion; then maximize worst case, clean accuracy, Brier and compactness in that order.",
+                     "note": "Fixed timing shifts (with +/-0.1 s neighborhoods) and 30/60 s truncation neighborhoods are excluded from training."},
+        "selection_rule": "Require clean >=68/71, improve worst timing stress, and lose at most one call versus the champion in every clean/timing/truncation scenario; then maximize worst case, clean accuracy, Brier and compactness.",
         "candidates": candidates, "selected": selected["name"] if selected else None,
-        "promoted": promoted, "http_verification": http_verification,
+        "promoted": promoted, "audio_promotion_gate": audio_gate,
+        "http_verification": http_verification,
         "validation_limitation": "Official val has already been used for Phase 3 block selection; all Phase 4 results remain exploratory until hidden evaluation.",
         "vad_cache": cache,
     }

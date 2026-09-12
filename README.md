@@ -84,8 +84,12 @@ make audit
 make robust
 ```
 
-La promoción es deliberadamente explícita y solo ocurre si se cumplen las
-puertas predeclaradas:
+La promoción es deliberadamente explícita. El entrenamiento incluye recortes
+continuos sin mostrar al modelo los puntos exactos de evaluación 30/60 s. Debe
+mejorar el peor estrés temporal, conservar al menos 68/71 limpio y no perder más
+de una llamada frente al campeón en ningún escenario. También exige los reportes
+`audio_robustness_champion.json` y `audio_robustness_candidate.json` con hashes
+coincidentes antes de ejecutar:
 
 ```bash
 .venv/bin/python phase4_robust.py --workers 6 --promote

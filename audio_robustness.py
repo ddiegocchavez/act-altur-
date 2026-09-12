@@ -53,6 +53,7 @@ def run(url, data_dir, output):
     val = manifest.loc[manifest.split == "val"].reset_index(drop=True)
     if len(val) != 71 or not val.anon_id.is_unique:
         raise RuntimeError("Unexpected official val split")
+    prediction_rows = []
     report = {"status": "complete", "url": url, "audio_storage": "in_memory_only",
               "scenarios": {}}
     with httpx.Client(base_url=url.rstrip("/"), timeout=httpx.Timeout(120, connect=30),
@@ -73,6 +74,9 @@ def run(url, data_dir, output):
                 confidence = float(result["confidence"])
                 probability = confidence if result["is_synthetic"] else 1 - confidence
                 rows.append((item.label, probability, confidence, elapsed))
+                prediction_rows.append({"scenario": scenario, "anon_id": item.anon_id,
+                                        "label": item.label, "p_synthetic": probability,
+                                        "confidence": confidence, "latency_s": elapsed})
             labels = np.asarray([label == "synthetic" for label, _, _, _ in rows], dtype=int)
             probability = np.asarray([value for _, value, _, _ in rows])
             latency = np.asarray([value for _, _, _, value in rows])
@@ -83,6 +87,7 @@ def run(url, data_dir, output):
             report["scenarios"][scenario] = scores
             print(f"{scenario}: {scores['correct']}/71", flush=True)
     output.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(prediction_rows).to_csv(output.with_name(output.stem + "_predictions.csv"), index=False)
     output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
 

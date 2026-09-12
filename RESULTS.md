@@ -133,6 +133,12 @@ Se implementaron `relative_recovery`, ponderación de eventos escasos, HGB
 regularizado, regresión logística, aumentación temporal no circular, selección
 por peor caso y diagnóstico de calibración. La implementación está preparada, pero ningún retador fue entrenado ni promovido en esta copia porque faltan los datos oficiales locales.
 
+La primera ejecución externa del retador temporal conservó 69/71 limpio y elevó
+el peor estrés temporal de 45/71 a 66/71, pero quedó rechazado por recortes:
+48/71 a 30 s y 54/71 a 60 s, frente a 59/71 y 64/71 del campeón. Esta observación
+motivó aumentación por duración y una puerta de no-regresión por escenario; no se
+presenta el primer retador como modelo final.
+
 Las métricas de Fase 4 no se extrapolan a partir de los artefactos anteriores.
 
 ## Reproducción y alcance

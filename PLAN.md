@@ -187,9 +187,17 @@ solo-`silence_fill_wait_med` y solo-missingness. `phase4_robust.py` compara el
 campeón con HGB regularizado y logística usando perturbaciones reproducibles.
 
 Los desplazamientos de entrenamiento se muestrean continuamente en 0–2 s, pero
-se excluyen vecindarios de ±0.1 s alrededor de 0.5, 1.0 y 1.5 s. La promoción
-requiere al menos 68/71 limpio y superar estrictamente al campeón en el peor
-caso de limpio/−0.5/−1.0/−1.5 s. Sin `--promote`, nunca reemplaza el artefacto.
+se excluyen vecindarios de ±0.1 s alrededor de 0.5, 1.0 y 1.5 s. Después de que
+el primer retador mantuvo 69/71 limpio pero cayó a 48/71 a 30 s, se añadieron
+recortes continuos de train en 20–28, 32–55 y 65–90 s. Los puntos 30/60 s y sus
+vecindarios quedan reservados para evaluación. La promoción requiere 68/71
+limpio, mejorar el peor estrés temporal y no perder más de una llamada frente
+al campeón en ningún escenario limpio, temporal o truncado.
+
+`--promote` exige además dos reportes HTTP de audio cuyos hashes correspondan
+exactamente al campeón y al retador seleccionado. Si cualquier escenario de
+ganancia, remuestreo o recorte pierde más de una llamada, conserva el campeón.
+Sin `--promote`, nunca reemplaza el artefacto.
 Platt, ECE y log-loss son un diagnóstico in-sample declarado y no intervienen
 en selección ni despliegue. `audio_robustness.py` limita el alcance a las tres
 familias aprobadas y procesa todas las transformaciones en memoria.
