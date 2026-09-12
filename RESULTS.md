@@ -131,7 +131,39 @@ La inspección de árboles confirma el atajo: `lat_med` domina el baseline (253 
 
 Se implementaron `relative_recovery`, ponderación de eventos escasos, HGB
 regularizado, regresión logística, aumentación temporal no circular, selección
-por peor caso y diagnóstico de calibración. La implementación está preparada, pero ningún retador fue entrenado ni promovido en esta copia porque faltan los datos oficiales locales.
+por peor caso y diagnóstico de calibración. Fase 4 ejecutada. Retador seleccionado: `balanced_current_hgb`; promoción: `True`.
+
+| Escenario sobre turnos | Campeón anterior | Retador balanceado | Delta |
+| --- | ---: | ---: | ---: |
+| `clean` | 69/71 | **70/71 (98.59%)** | +1 |
+| `acceleration_0.5s` | 60/71 | **67/71 (94.37%)** | +7 |
+| `acceleration_1s` | 51/71 | **68/71 (95.77%)** | +17 |
+| `acceleration_1.5s` | 45/71 | **69/71 (97.18%)** | +24 |
+| `truncate_30s` | 58/71 | **62/71 (87.32%)** | +4 |
+| `truncate_60s` | 64/71 | **64/71 (90.14%)** | +0 |
+
+El retador usa 67 features y conserva el bloque `silence_recovery`.
+Su SHA-256 es `12d923ff72cc44cd35b11b0909b65ac488f0a8906f8edbdc50b20710e386e4b6`. Las tres puertas internas: limpio,
+robustez temporal y balance por escenario, quedaron en
+`True`, `True` y
+`True` respectivamente.
+
+Prueba HTTP con WAV real y transformaciones en memoria:
+
+| Escenario de audio | Campeón anterior | Modelo promovido | Delta | Abstenciones |
+| --- | ---: | ---: | ---: | ---: |
+| `clean` | 69/71 | **70/71 (98.59%)** | +1 | 0 |
+| `gain_minus_6db` | 69/71 | **70/71 (98.59%)** | +1 | 0 |
+| `gain_plus_6db` | 69/71 | **70/71 (98.59%)** | +1 | 0 |
+| `resample_8_16_8` | 69/71 | **70/71 (98.59%)** | +1 | 0 |
+| `truncate_30s` | 59/71 | **61/71 (85.92%)** | +2 | 0 |
+| `truncate_60s` | 64/71 | **65/71 (91.55%)** | +1 | 0 |
+
+La puerta externa de audio quedó en
+`True`; el HTTP final procesó
+71/71 sin errores y
+reprodujo las probabilidades offline con diferencia máxima
+`1.3877787807814457e-16`.
 
 La primera ejecución externa del retador temporal conservó 69/71 limpio y elevó
 el peor estrés temporal de 45/71 a 66/71, pero quedó rechazado por recortes:
@@ -149,4 +181,4 @@ make all PUBLIC_URL=https://altur-detector.onrender.com
 
 Instala dependencias, verifica/descarga los datos fijados, ejecuta Fase 1, verifica baseline local y público, corre ablaciones por HTTP y estrés. Las puertas se ejecutan secuencialmente. La comprobación pública requiere que esa URL sirva el baseline cuya métrica se compara; falla si el despliegue cambió. Para repetir Fase 3 después del cierre público registrado: `make phase3 stress`.
 
-Artefactos de evidencia: `reports/phase2_public_http.json`, `reports/phase3.json`, `reports/phase3_final_clean_http.json`, `reports/phase3_final_edges.json`, `reports/stress_latency.json`. Predicciones por llamada y cachés permanecen locales. No se ha medido semántica, acústica, clips parciales, ruido/ganancia ni calibración adicional. La demo sigue pendiente.
+Artefactos de evidencia: `reports/phase2_public_http.json`, `reports/phase3.json`, `reports/phase3_final_clean_http.json`, `reports/phase3_final_edges.json`, `reports/stress_latency.json`, `reports/phase4_robust.json`, `reports/audio_robustness_champion.json` y `reports/audio_robustness_candidate.json`. Predicciones por llamada, audios y cachés permanecen locales. No se ha medido semántica, acústica neuronal, codecs/eco ni calibración independiente. La demo sigue pendiente.

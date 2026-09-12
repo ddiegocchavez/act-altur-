@@ -1,0 +1,802 @@
+{
+  "status": "complete",
+  "champion_sha256": "3e2de98c6a780225e2a387ffd2fc3c35cba2132a873fc54b2fecc615d6bbb384",
+  "champion_scenarios": [
+    {
+      "n": 71,
+      "correct": 69,
+      "accuracy": 0.971830985915493,
+      "auc": 0.9904610492845787,
+      "eer": 0.05405405405405406,
+      "eer_legacy": 0.05405405405405406,
+      "brier": 0.03062651874960819,
+      "confusion_matrix": [
+        [
+          35,
+          2
+        ],
+        [
+          0,
+          34
+        ]
+      ],
+      "scenario": "clean",
+      "acceleration_s": 0.0,
+      "truncate_s": null,
+      "synthetic_recall": 1.0
+    },
+    {
+      "n": 71,
+      "correct": 60,
+      "accuracy": 0.8450704225352113,
+      "auc": 0.9610492845786963,
+      "eer": 0.10810810810810811,
+      "eer_legacy": 0.10810810810810811,
+      "brier": 0.15207643214438896,
+      "confusion_matrix": [
+        [
+          35,
+          2
+        ],
+        [
+          9,
+          25
+        ]
+      ],
+      "scenario": "acceleration_0.5s",
+      "acceleration_s": 0.5,
+      "truncate_s": null,
+      "synthetic_recall": 0.7352941176470589
+    },
+    {
+      "n": 71,
+      "correct": 51,
+      "accuracy": 0.7183098591549296,
+      "auc": 0.9030206677265501,
+      "eer": 0.11764705882352944,
+      "eer_legacy": 0.10810810810810811,
+      "brier": 0.27565014172304064,
+      "confusion_matrix": [
+        [
+          35,
+          2
+        ],
+        [
+          18,
+          16
+        ]
+      ],
+      "scenario": "acceleration_1s",
+      "acceleration_s": 1.0,
+      "truncate_s": null,
+      "synthetic_recall": 0.47058823529411764
+    },
+    {
+      "n": 71,
+      "correct": 45,
+      "accuracy": 0.6338028169014085,
+      "auc": 0.8823529411764705,
+      "eer": 0.16216216216216217,
+      "eer_legacy": 0.16216216216216217,
+      "brier": 0.3592866788231855,
+      "confusion_matrix": [
+        [
+          35,
+          2
+        ],
+        [
+          24,
+          10
+        ]
+      ],
+      "scenario": "acceleration_1.5s",
+      "acceleration_s": 1.5,
+      "truncate_s": null,
+      "synthetic_recall": 0.29411764705882354
+    },
+    {
+      "n": 71,
+      "correct": 58,
+      "accuracy": 0.8169014084507042,
+      "auc": 0.904610492845787,
+      "eer": 0.17647058823529416,
+      "eer_legacy": 0.1891891891891892,
+      "brier": 0.1690097226000966,
+      "confusion_matrix": [
+        [
+          25,
+          12
+        ],
+        [
+          1,
+          33
+        ]
+      ],
+      "scenario": "truncate_30s",
+      "acceleration_s": 0.0,
+      "truncate_s": 30.0,
+      "synthetic_recall": 0.9705882352941176
+    },
+    {
+      "n": 71,
+      "correct": 64,
+      "accuracy": 0.9014084507042254,
+      "auc": 0.9809220985691574,
+      "eer": 0.05405405405405406,
+      "eer_legacy": 0.05405405405405406,
+      "brier": 0.096941523262535,
+      "confusion_matrix": [
+        [
+          31,
+          6
+        ],
+        [
+          1,
+          33
+        ]
+      ],
+      "scenario": "truncate_60s",
+      "acceleration_s": 0.0,
+      "truncate_s": 60.0,
+      "synthetic_recall": 0.9705882352941176
+    }
+  ],
+  "champion_worst_case_correct": 45,
+  "champion_calibration": {
+    "status": "diagnostic_only",
+    "before": {
+      "brier": 0.03062651874960819,
+      "log_loss": 0.15072991458503165,
+      "ece_10_equal_width": 0.03702921230856176
+    },
+    "platt_in_sample": {
+      "brier": 0.03168804912785808,
+      "log_loss": 0.11149600565970344,
+      "ece_10_equal_width": 0.03070383070169643
+    },
+    "coefficient": 0.6685264961593335,
+    "intercept": -0.8762368213029105,
+    "limitation": "Platt was fitted and scored on the same 71-call val set after model selection; these optimistic values are not used to rank or deploy a model."
+  },
+  "training": {
+    "seed": 20260912,
+    "time_augmentations_per_train_call": 3,
+    "truncation_intervals_s": [
+      [
+        20.0,
+        28.0
+      ],
+      [
+        32.0,
+        55.0
+      ],
+      [
+        65.0,
+        90.0
+      ]
+    ],
+    "held_out_truncations_s": [
+      30.0,
+      60.0
+    ],
+    "continuous_shift_intervals_s": [
+      [
+        0.0,
+        0.4
+      ],
+      [
+        0.6,
+        0.9
+      ],
+      [
+        1.1,
+        1.4
+      ],
+      [
+        1.6,
+        2.0
+      ]
+    ],
+    "held_out_fixed_shifts_s": [
+      0.5,
+      1.0,
+      1.5
+    ],
+    "note": "Fixed timing shifts (with +/-0.1 s neighborhoods) and 30/60 s truncation neighborhoods are excluded from training."
+  },
+  "selection_rule": "Require clean >=68/71, improve worst timing stress, and lose at most one call versus the champion in every clean/timing/truncation scenario; then maximize worst case, clean accuracy, Brier and compactness.",
+  "candidates": [
+    {
+      "name": "balanced_current_hgb",
+      "kind": "hgb",
+      "features": 67,
+      "blocks": [
+        "silence_recovery"
+      ],
+      "artifact": "artifacts\\experiments\\phase4_balanced_current_hgb.joblib",
+      "artifact_sha256": "12d923ff72cc44cd35b11b0909b65ac488f0a8906f8edbdc50b20710e386e4b6",
+      "scenarios": [
+        {
+          "n": 71,
+          "correct": 70,
+          "accuracy": 0.9859154929577465,
+          "auc": 0.9992050874403816,
+          "eer": 0.02702702702702703,
+          "eer_legacy": 0.02702702702702703,
+          "brier": 0.019740960212421027,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              0,
+              34
+            ]
+          ],
+          "scenario": "clean",
+          "acceleration_s": 0.0,
+          "truncate_s": null,
+          "synthetic_recall": 1.0
+        },
+        {
+          "n": 71,
+          "correct": 67,
+          "accuracy": 0.9436619718309859,
+          "auc": 0.992845786963434,
+          "eer": 0.05882352941176472,
+          "eer_legacy": 0.08108108108108109,
+          "brier": 0.039555500990498677,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              3,
+              31
+            ]
+          ],
+          "scenario": "acceleration_0.5s",
+          "acceleration_s": 0.5,
+          "truncate_s": null,
+          "synthetic_recall": 0.9117647058823529
+        },
+        {
+          "n": 71,
+          "correct": 68,
+          "accuracy": 0.9577464788732394,
+          "auc": 0.9864864864864864,
+          "eer": 0.05882352941176472,
+          "eer_legacy": 0.08108108108108109,
+          "brier": 0.04500606689130763,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              2,
+              32
+            ]
+          ],
+          "scenario": "acceleration_1s",
+          "acceleration_s": 1.0,
+          "truncate_s": null,
+          "synthetic_recall": 0.9411764705882353
+        },
+        {
+          "n": 71,
+          "correct": 69,
+          "accuracy": 0.971830985915493,
+          "auc": 0.9960254372019077,
+          "eer": 0.02941176470588236,
+          "eer_legacy": 0.02702702702702703,
+          "brier": 0.03105737551419772,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              1,
+              33
+            ]
+          ],
+          "scenario": "acceleration_1.5s",
+          "acceleration_s": 1.5,
+          "truncate_s": null,
+          "synthetic_recall": 0.9705882352941176
+        },
+        {
+          "n": 71,
+          "correct": 62,
+          "accuracy": 0.8732394366197183,
+          "auc": 0.9451510333863276,
+          "eer": 0.13513513513513514,
+          "eer_legacy": 0.13513513513513514,
+          "brier": 0.09471493309488035,
+          "confusion_matrix": [
+            [
+              34,
+              3
+            ],
+            [
+              6,
+              28
+            ]
+          ],
+          "scenario": "truncate_30s",
+          "acceleration_s": 0.0,
+          "truncate_s": 30.0,
+          "synthetic_recall": 0.8235294117647058
+        },
+        {
+          "n": 71,
+          "correct": 64,
+          "accuracy": 0.9014084507042254,
+          "auc": 0.9817170111287759,
+          "eer": 0.08108108108108109,
+          "eer_legacy": 0.08108108108108109,
+          "brier": 0.05868570348046137,
+          "confusion_matrix": [
+            [
+              32,
+              5
+            ],
+            [
+              2,
+              32
+            ]
+          ],
+          "scenario": "truncate_60s",
+          "acceleration_s": 0.0,
+          "truncate_s": 60.0,
+          "synthetic_recall": 0.9411764705882353
+        }
+      ],
+      "clean_gate_passed": true,
+      "timing_robustness_gate_passed": true,
+      "balance_gate_passed": true,
+      "scenario_correct_deltas": {
+        "clean": 1,
+        "acceleration_0.5s": 7,
+        "acceleration_1s": 17,
+        "acceleration_1.5s": 24,
+        "truncate_30s": 4,
+        "truncate_60s": 0
+      },
+      "allowed_regression_calls": 1,
+      "worst_case_correct": 62,
+      "calibration": {
+        "status": "diagnostic_only",
+        "before": {
+          "brier": 0.019740960212421024,
+          "log_loss": 0.10082001691055029,
+          "ece_10_equal_width": 0.07905904418663154
+        },
+        "platt_in_sample": {
+          "brier": 0.011695098449768352,
+          "log_loss": 0.04542822271330929,
+          "ece_10_equal_width": 0.03552323421318496
+        },
+        "coefficient": 1.7779222368302776,
+        "intercept": -0.7979716042009124,
+        "limitation": "Platt was fitted and scored on the same 71-call val set after model selection; these optimistic values are not used to rank or deploy a model."
+      }
+    },
+    {
+      "name": "relative_hgb",
+      "kind": "hgb",
+      "features": 58,
+      "blocks": [
+        "relative_recovery"
+      ],
+      "artifact": "artifacts\\experiments\\phase4_relative_hgb.joblib",
+      "artifact_sha256": "5db8e4c7522d23d8de406d1982ef348d321ab56afb3aa0ac02437f23ae62444f",
+      "scenarios": [
+        {
+          "n": 71,
+          "correct": 67,
+          "accuracy": 0.9436619718309859,
+          "auc": 0.985691573926868,
+          "eer": 0.05882352941176472,
+          "eer_legacy": 0.05405405405405406,
+          "brier": 0.057671122826240484,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              3,
+              31
+            ]
+          ],
+          "scenario": "clean",
+          "acceleration_s": 0.0,
+          "truncate_s": null,
+          "synthetic_recall": 0.9117647058823529
+        },
+        {
+          "n": 71,
+          "correct": 66,
+          "accuracy": 0.9295774647887324,
+          "auc": 0.9793322734499206,
+          "eer": 0.08823529411764708,
+          "eer_legacy": 0.10810810810810811,
+          "brier": 0.05439039305301004,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              4,
+              30
+            ]
+          ],
+          "scenario": "acceleration_0.5s",
+          "acceleration_s": 0.5,
+          "truncate_s": null,
+          "synthetic_recall": 0.8823529411764706
+        },
+        {
+          "n": 71,
+          "correct": 66,
+          "accuracy": 0.9295774647887324,
+          "auc": 0.9833068362480127,
+          "eer": 0.08823529411764708,
+          "eer_legacy": 0.13513513513513514,
+          "brier": 0.050692457619794934,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              4,
+              30
+            ]
+          ],
+          "scenario": "acceleration_1s",
+          "acceleration_s": 1.0,
+          "truncate_s": null,
+          "synthetic_recall": 0.8823529411764706
+        },
+        {
+          "n": 71,
+          "correct": 67,
+          "accuracy": 0.9436619718309859,
+          "auc": 0.980127186009539,
+          "eer": 0.08823529411764708,
+          "eer_legacy": 0.16216216216216217,
+          "brier": 0.050093588220747526,
+          "confusion_matrix": [
+            [
+              36,
+              1
+            ],
+            [
+              3,
+              31
+            ]
+          ],
+          "scenario": "acceleration_1.5s",
+          "acceleration_s": 1.5,
+          "truncate_s": null,
+          "synthetic_recall": 0.9117647058823529
+        },
+        {
+          "n": 71,
+          "correct": 54,
+          "accuracy": 0.7605633802816901,
+          "auc": 0.8751987281399045,
+          "eer": 0.23529411764705888,
+          "eer_legacy": 0.21621621621621623,
+          "brier": 0.14205051558944773,
+          "confusion_matrix": [
+            [
+              29,
+              8
+            ],
+            [
+              9,
+              25
+            ]
+          ],
+          "scenario": "truncate_30s",
+          "acceleration_s": 0.0,
+          "truncate_s": 30.0,
+          "synthetic_recall": 0.7352941176470589
+        },
+        {
+          "n": 71,
+          "correct": 59,
+          "accuracy": 0.8309859154929577,
+          "auc": 0.9236883942766296,
+          "eer": 0.17647058823529416,
+          "eer_legacy": 0.1891891891891892,
+          "brier": 0.10903140003384754,
+          "confusion_matrix": [
+            [
+              30,
+              7
+            ],
+            [
+              5,
+              29
+            ]
+          ],
+          "scenario": "truncate_60s",
+          "acceleration_s": 0.0,
+          "truncate_s": 60.0,
+          "synthetic_recall": 0.8529411764705882
+        }
+      ],
+      "clean_gate_passed": false,
+      "timing_robustness_gate_passed": true,
+      "balance_gate_passed": false,
+      "scenario_correct_deltas": {
+        "clean": -2,
+        "acceleration_0.5s": 6,
+        "acceleration_1s": 15,
+        "acceleration_1.5s": 22,
+        "truncate_30s": -4,
+        "truncate_60s": -5
+      },
+      "allowed_regression_calls": 1,
+      "worst_case_correct": 54,
+      "calibration": {
+        "status": "diagnostic_only",
+        "before": {
+          "brier": 0.057671122826240484,
+          "log_loss": 0.21583207357586875,
+          "ece_10_equal_width": 0.09827462867174863
+        },
+        "platt_in_sample": {
+          "brier": 0.04649221102293092,
+          "log_loss": 0.15887321482649766,
+          "ece_10_equal_width": 0.03819432426404808
+        },
+        "coefficient": 1.7778885621170806,
+        "intercept": 0.5359183460916707,
+        "limitation": "Platt was fitted and scored on the same 71-call val set after model selection; these optimistic values are not used to rank or deploy a model."
+      }
+    },
+    {
+      "name": "relative_logistic",
+      "kind": "logistic",
+      "features": 58,
+      "blocks": [
+        "relative_recovery"
+      ],
+      "artifact": "artifacts\\experiments\\phase4_relative_logistic.joblib",
+      "artifact_sha256": "f7e0a05d38091528d6d87509748d92c8e1aef45c8f3bde8938f21c47ca497546",
+      "scenarios": [
+        {
+          "n": 71,
+          "correct": 66,
+          "accuracy": 0.9295774647887324,
+          "auc": 0.9626391096979331,
+          "eer": 0.05882352941176472,
+          "eer_legacy": 0.02702702702702703,
+          "brier": 0.0634282019138881,
+          "confusion_matrix": [
+            [
+              34,
+              3
+            ],
+            [
+              2,
+              32
+            ]
+          ],
+          "scenario": "clean",
+          "acceleration_s": 0.0,
+          "truncate_s": null,
+          "synthetic_recall": 0.9411764705882353
+        },
+        {
+          "n": 71,
+          "correct": 65,
+          "accuracy": 0.9154929577464789,
+          "auc": 0.9586645468998409,
+          "eer": 0.08823529411764708,
+          "eer_legacy": 0.02702702702702703,
+          "brier": 0.06852159999576748,
+          "confusion_matrix": [
+            [
+              34,
+              3
+            ],
+            [
+              3,
+              31
+            ]
+          ],
+          "scenario": "acceleration_0.5s",
+          "acceleration_s": 0.5,
+          "truncate_s": null,
+          "synthetic_recall": 0.9117647058823529
+        },
+        {
+          "n": 71,
+          "correct": 65,
+          "accuracy": 0.9154929577464789,
+          "auc": 0.9610492845786963,
+          "eer": 0.08823529411764708,
+          "eer_legacy": 0.10810810810810811,
+          "brier": 0.06923193715242078,
+          "confusion_matrix": [
+            [
+              34,
+              3
+            ],
+            [
+              3,
+              31
+            ]
+          ],
+          "scenario": "acceleration_1s",
+          "acceleration_s": 1.0,
+          "truncate_s": null,
+          "synthetic_recall": 0.9117647058823529
+        },
+        {
+          "n": 71,
+          "correct": 65,
+          "accuracy": 0.9154929577464789,
+          "auc": 0.965818759936407,
+          "eer": 0.08823529411764708,
+          "eer_legacy": 0.10810810810810811,
+          "brier": 0.06995599484808394,
+          "confusion_matrix": [
+            [
+              34,
+              3
+            ],
+            [
+              3,
+              31
+            ]
+          ],
+          "scenario": "acceleration_1.5s",
+          "acceleration_s": 1.5,
+          "truncate_s": null,
+          "synthetic_recall": 0.9117647058823529
+        },
+        {
+          "n": 71,
+          "correct": 56,
+          "accuracy": 0.7887323943661971,
+          "auc": 0.9213036565977742,
+          "eer": 0.16216216216216217,
+          "eer_legacy": 0.16216216216216217,
+          "brier": 0.12025765330296011,
+          "confusion_matrix": [
+            [
+              31,
+              6
+            ],
+            [
+              9,
+              25
+            ]
+          ],
+          "scenario": "truncate_30s",
+          "acceleration_s": 0.0,
+          "truncate_s": 30.0,
+          "synthetic_recall": 0.7352941176470589
+        },
+        {
+          "n": 71,
+          "correct": 63,
+          "accuracy": 0.8873239436619719,
+          "auc": 0.9515103338632751,
+          "eer": 0.11764705882352944,
+          "eer_legacy": 0.13513513513513514,
+          "brier": 0.0903443529930832,
+          "confusion_matrix": [
+            [
+              33,
+              4
+            ],
+            [
+              4,
+              30
+            ]
+          ],
+          "scenario": "truncate_60s",
+          "acceleration_s": 0.0,
+          "truncate_s": 60.0,
+          "synthetic_recall": 0.8823529411764706
+        }
+      ],
+      "clean_gate_passed": false,
+      "timing_robustness_gate_passed": true,
+      "balance_gate_passed": false,
+      "scenario_correct_deltas": {
+        "clean": -3,
+        "acceleration_0.5s": 5,
+        "acceleration_1s": 14,
+        "acceleration_1.5s": 20,
+        "truncate_30s": -2,
+        "truncate_60s": -1
+      },
+      "allowed_regression_calls": 1,
+      "worst_case_correct": 56,
+      "calibration": {
+        "status": "diagnostic_only",
+        "before": {
+          "brier": 0.0634282019138881,
+          "log_loss": 0.28494885703784273,
+          "ece_10_equal_width": 0.08933539567804862
+        },
+        "platt_in_sample": {
+          "brier": 0.061875701107200885,
+          "log_loss": 0.2841477275320694,
+          "ece_10_equal_width": 0.10547208961303184
+        },
+        "coefficient": 1.0055483041508793,
+        "intercept": -0.12504471125721514,
+        "limitation": "Platt was fitted and scored on the same 71-call val set after model selection; these optimistic values are not used to rank or deploy a model."
+      }
+    }
+  ],
+  "selected": "balanced_current_hgb",
+  "promoted": true,
+  "audio_promotion_gate": {
+    "passed": true,
+    "allowed_regression_calls": 1,
+    "scenario_correct_deltas": {
+      "truncate_30s": 2,
+      "gain_plus_6db": 1,
+      "clean": 1,
+      "gain_minus_6db": 1,
+      "truncate_60s": 1,
+      "resample_8_16_8": 1
+    },
+    "reports": {
+      "champion": "reports\\audio_robustness_champion.json",
+      "candidate": "reports\\audio_robustness_candidate.json"
+    }
+  },
+  "http_verification": {
+    "n": 71,
+    "correct": 70,
+    "accuracy": 0.9859154929577465,
+    "auc": 0.9992050874403816,
+    "eer": 0.02702702702702703,
+    "eer_legacy": 0.02702702702702703,
+    "brier": 0.019740960212421024,
+    "confusion_matrix": [
+      [
+        36,
+        1
+      ],
+      [
+        0,
+        34
+      ]
+    ],
+    "transport": "HTTP loopback",
+    "url": "http://127.0.0.1:8002",
+    "started_at_utc": "2026-09-12T20:39:21.949804+00:00",
+    "completed_at_utc": "2026-09-12T20:39:29.173402+00:00",
+    "health_latency_ms": 1.9683999998960644,
+    "http_successes": 71,
+    "http_errors": 0,
+    "detect_retries": 0,
+    "model_sha256": "12d923ff72cc44cd35b11b0909b65ac488f0a8906f8edbdc50b20710e386e4b6",
+    "pipeline_sha256": "d1f2fc75735ec8ffc6b45e6a4b56ad671a91a8cf94b82f38089193f87d3385f8",
+    "abstentions": 0,
+    "latency_p50_ms": 78.38720000017929,
+    "latency_p95_ms": 105.8277500001168,
+    "latency_scope": "Sequential, warm server; includes JSON encoding, HTTP and inference, excludes WAV read/base64",
+    "max_probability_delta_offline": 1.3877787807814457e-16,
+    "offline_equivalent": true
+  },
+  "validation_limitation": "Official val has already been used for Phase 3 block selection; all Phase 4 results remain exploratory until hidden evaluation.",
+  "vad_cache": "cache\\vad_turns_74e47fed9466d323"
+}
