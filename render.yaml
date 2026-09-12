@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     region: virginia
-    repo: https://github.com/Chaarliee06/altur-detector
+    repo: https://github.com/ddiegocchavez/act-altur-
     branch: main
     buildCommand: pip install -r requirements.lock
     startCommand: python serve.py
